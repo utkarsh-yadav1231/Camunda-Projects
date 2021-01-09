@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <meta http-equiv="cache-control" content="max-age=0" />
+  <meta http-equiv="cache-control" content="no-cache" />
+  <meta http-equiv="expires" content="0" />
+  <meta http-equiv="pragma" content="no-cache" />
+
+  <style type="text/css">
+    html, body, #canvas {
+      height: 100%;
+      padding: 0;
+    }
+    
+    .transaction-boundary {
+      background-color: rgba(180, 21, 21, 0.7);
+      border-radius: 1px;
+      min-height: 50px;
+      width: 3px;
+    }
+
+    .execution-listener {
+      background-color: rgba(21, 66, 180, 0.7);
+      color: White;
+      border-radius: 5px;
+      font-family: Arial;
+      font-size: 12px;
+      padding: 5px;
+      min-height: 16px;
+      min-width: 16px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
+      fill: rgba(66, 180, 21, 0.7) !important; /* color elements as green */
+    }
+    
+    .highlight-running .djs-visual > :nth-child(1) {
+    	fill: rgba(0, 198, 218, 0.7) !important; /* color still running flow nodes as blue */
+    }
+    
+    #info-box {
+   	  margin-left: 20px;
+      margin-top: 15px;
+      padding: 10px;
+      table-layout: fixed;
+      border-collapse: collapse;
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      font-family: sans-serif;
+      line-height: 150%;
+      font-size: 80%;
+      z-index: 1000;
+      background-color: rgba(255,255,255,0.90);
+      border-radius: 10px;
+    }
+  </style>
+
+  <title>Process Test Coverage Report</title>
+</head>
+<body>
+
+  <div id="info-box">
+	<div>Process Definition Name: NSNLeaveRequest</div>
+	<div>Coverage: 0%</div>
+	<div>Test Class: com.utyadav.company.NSNLeaveRequest.ProcessUnitTest</div>
+	
+  </div>
+  
+  <!-- element to draw bpmn diagram in -->
+  <div id="canvas"></div>
+
+  <!-- scripts -->
+
+  <!-- seed dependencies (required for demo only) -->
+  <script src="../bower_components/jquery/dist/jquery.js"></script>
+
+  <!-- bpmn-js viewer -->
+  <script src="../bower_components/bpmn-js/dist/bpmn-navigated-viewer.js"></script>
+
+  <!-- application -->
+  <script>
+    (function(NavigatedViewer, $) {
+
+      // create viewer
+      var bpmnViewer = new NavigatedViewer({
+        container: '#canvas'
+      });
+
+
+      // import function
+      function importXML(xml) {
+
+        // import diagram
+        bpmnViewer.importXML(xml, function(err) {
+
+          if (err) {
+            return console.error('could not import BPMN 2.0 diagram', err);
+          }
+
+          var canvas = bpmnViewer.get('canvas'),
+              overlays = bpmnViewer.get('overlays');
+
+
+          // zoom to fit full viewport
+          canvas.zoom('fit-viewport', true);
+
+      // visualizations          
+      elementRegistry = bpmnViewer.get('elementRegistry');
+      var elements = elementRegistry.getAll();
+      console.log(elements);
+      for (var i = 0; i < elements.length; i++) {
+        var element = elements[i];
+        if (element.type != 'label') {
+          
+          // Transaction Boundaries
+          if (element.businessObject.$attrs["camunda:asyncBefore"]
+                || element.businessObject.$attrs["camunda:async"]
+                || element.type == 'bpmn:ReceiveTask'
+                || element.type == 'bpmn:UserTask'
+                || element.type == 'bpmn:IntermediateCatchEvent'
+             ) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: (element.type == 'bpmn:IntermediateCatchEvent' ? 18 : 40),
+                left: -4
+              },
+              html: '<div class="transaction-boundary"></div>'
+            });
+          }
+          if (element.businessObject.$attrs["camunda:asyncAfter"]) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: 19,
+                right: -1
+              },
+              html: '<div class="transaction-boundary"></div>'
+            });
+          }
+          
+          if (element.businessObject.extensionElements) {
+            var extensionElements = element.businessObject.extensionElements.values;
+            for (var j = 0; j < extensionElements.length; j++) {
+              console.log(extensionElements[j]);
+              if (extensionElements[j].$type == 'camunda:executionListener') {
+                if (extensionElements[j].event == 'end') {
+                  overlays.add(element.id, 'note', {
+                    position: {
+                      bottom: 0,
+                      right: 0
+                    },
+                    html: '<div class="execution-listener">' + extensionElements[j].expression + '</div>'
+                  });
+                }
+                if (extensionElements[j].event == 'start') {
+                  overlays.add(element.id, 'note', {
+                    position: {
+                      bottom: 0,
+                      left: 0
+                    },
+                    html: '<div class="execution-listener">' + extensionElements[j].expression + '</div>'
+                  });
+                }
+              }
+            }
+          }
+ 
+ 		  if (element.type == 'bpmn:SequenceFlow' && element.businessObject.conditionExpression) {
+ 		      var position = {
+                      left: 0
+                    }
+              if (element.waypoints[0].y > element.waypoints[element.waypoints.length - 1].y) {
+              	position.top = -29;
+              } else {
+                position.bottom = -3;
+              }    
+          	  overlays.add(element.id, 'note', {
+                    position: position,
+                    html: '<div class="execution-listener">' + element.businessObject.conditionExpression.body + '</div>'
+                  }); 
+		  }
+          
+          if (element.businessObject.$attrs["camunda:delegateExpression"]) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: -3,
+                left: 0
+              },
+              html: '<div class="execution-listener">' + element.businessObject.$attrs["camunda:delegateExpression"] + '</div>'
+            });
+          }
+          
+        }
+      }          
+          //YOUR ANNOTATIONS GO HERE
+
+        });
+      }
+
+
+      var diagramXML = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http:\/\/www.omg.org\/spec\/BPMN\/20100524\/MODEL\" xmlns:bpmndi=\"http:\/\/www.omg.org\/spec\/BPMN\/20100524\/DI\" xmlns:di=\"http:\/\/www.omg.org\/spec\/DD\/20100524\/DI\" xmlns:dc=\"http:\/\/www.omg.org\/spec\/DD\/20100524\/DC\" xmlns:xsi=\"http:\/\/www.w3.org\/2001\/XMLSchema-instance\" xmlns:camunda=\"http:\/\/camunda.org\/schema\/1.0\/bpmn\" xmlns:bioc=\"http:\/\/bpmn.io\/schema\/bpmn\/biocolor\/1.0\" id=\"Definitions_1\" targetNamespace=\"http:\/\/bpmn.io\/schema\/bpmn\" exporter=\"Camunda Modeler\" exporterVersion=\"4.4.0\">\n  <bpmn:collaboration id=\"NSNEmployeePlaybook\">\n    <bpmn:participant id=\"Participant_12wqvo5\" name=\"SOFTWARE COMPANY\" processRef=\"NSNLeaveRequest\" \/>\n  <\/bpmn:collaboration>\n  <bpmn:process id=\"NSNLeaveRequest\" name=\"NSNLeaveRequest\" isExecutable=\"true\">\n    <bpmn:laneSet id=\"LaneSet_0cfy7ta\">\n      <bpmn:lane id=\"Lane_1scd4l7\" name=\"MANAGER\">\n        <bpmn:flowNodeRef>Activity_0xgpoj5<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Activity_1q5apsx<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Activity_0rfabvw<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_0w14xna<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_07n3bfj<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Activity_1t9op6x<\/bpmn:flowNodeRef>\n      <\/bpmn:lane>\n      <bpmn:lane id=\"Lane_1uad5je\" name=\"EMPLOYEE\">\n        <bpmn:flowNodeRef>Activity_138j37e<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Activity_1k8hebb<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_0veur5u<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Event_1g4fm7l<\/bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Activity_0c1ochz<\/bpmn:flowNodeRef>\n      <\/bpmn:lane>\n    <\/bpmn:laneSet>\n    <bpmn:userTask id=\"Activity_0xgpoj5\" name=\"Manager\">\n      <bpmn:extensionElements>\n        <camunda:formData>\n          <camunda:formField id=\"Name\" label=\"Name\" type=\"string\" defaultValue=\"${Name}\" \/>\n          <camunda:formField id=\"Emp_Id\" label=\"Emp_Id\" type=\"long\" defaultValue=\"${Emp_Id}\" \/>\n          <camunda:formField id=\"Days\" label=\"Days\" type=\"long\" defaultValue=\"${Days}\" \/>\n          <camunda:formField id=\"Rule_Output\" label=\"Rule_Output\" type=\"string\" defaultValue=\"${nature}\" \/>\n          <camunda:formField id=\"verified\" label=\"verified\" type=\"boolean\" \/>\n        <\/camunda:formData>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_1l4c60m<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1lqabpj<\/bpmn:outgoing>\n      <bpmn:outgoing>Flow_0y71a4v<\/bpmn:outgoing>\n    <\/bpmn:userTask>\n    <bpmn:userTask id=\"Activity_1q5apsx\" name=\"HR\">\n      <bpmn:extensionElements>\n        <camunda:formData>\n          <camunda:formField id=\"Name\" label=\"Name\" type=\"string\" \/>\n          <camunda:formField id=\"Emp_Id\" label=\"Emp_Id\" type=\"long\" \/>\n          <camunda:formField id=\"Days\" label=\"Days\" type=\"long\" \/>\n          <camunda:formField id=\"Rule_Output\" label=\"Rule_Output\" type=\"string\" defaultValue=\"${nature}\" \/>\n          <camunda:formField id=\"verified\" label=\"verified\" type=\"boolean\" \/>\n        <\/camunda:formData>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_0umuvut<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0e5j15m<\/bpmn:outgoing>\n      <bpmn:outgoing>Flow_13q471t<\/bpmn:outgoing>\n    <\/bpmn:userTask>\n    <bpmn:serviceTask id=\"Activity_0rfabvw\" name=\"EMAIL to Employee- LEAVE Request Accepted\" camunda:class=\"com.utyadav.company.NSNLeaveRequest.NSNMailService\">\n      <bpmn:incoming>Flow_0y71a4v<\/bpmn:incoming>\n      <bpmn:incoming>Flow_0e5j15m<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_029tzwa<\/bpmn:outgoing>\n    <\/bpmn:serviceTask>\n    <bpmn:businessRuleTask id=\"Activity_138j37e\" name=\"RULE TABLE for LEAVE REQUEST\" camunda:resultVariable=\"nature\" camunda:decisionRef=\"rule\" camunda:mapDecisionResult=\"singleEntry\">\n      <bpmn:incoming>Flow_03vaczo<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1l4c60m<\/bpmn:outgoing>\n    <\/bpmn:businessRuleTask>\n    <bpmn:userTask id=\"Activity_1k8hebb\" name=\"Employee submits Online LEAVE REQUEST\">\n      <bpmn:extensionElements>\n        <camunda:formData>\n          <camunda:formField id=\"Name\" label=\"Name\" type=\"string\" \/>\n          <camunda:formField id=\"Emp_Id\" label=\"Emp_Id\" type=\"long\" \/>\n          <camunda:formField id=\"Days\" label=\"Days\" type=\"long\" \/>\n        <\/camunda:formData>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_18qx78x<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_03vaczo<\/bpmn:outgoing>\n    <\/bpmn:userTask>\n    <bpmn:startEvent id=\"Event_0veur5u\" name=\"Incident Detected\">\n      <bpmn:outgoing>Flow_18qx78x<\/bpmn:outgoing>\n    <\/bpmn:startEvent>\n    <bpmn:endEvent id=\"Event_1g4fm7l\" name=\"Process&#10;Ends here\">\n      <bpmn:incoming>Flow_0o0wzbx<\/bpmn:incoming>\n    <\/bpmn:endEvent>\n    <bpmn:endEvent id=\"Event_0w14xna\" name=\"Process Ends here\">\n      <bpmn:incoming>Flow_1wes50d<\/bpmn:incoming>\n    <\/bpmn:endEvent>\n    <bpmn:boundaryEvent id=\"Event_07n3bfj\" attachedToRef=\"Activity_0xgpoj5\">\n      <bpmn:outgoing>Flow_0umuvut<\/bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_0vnf1de\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">PT1M<\/bpmn:timeDuration>\n      <\/bpmn:timerEventDefinition>\n    <\/bpmn:boundaryEvent>\n    <bpmn:sequenceFlow id=\"Flow_0o0wzbx\" sourceRef=\"Activity_0c1ochz\" targetRef=\"Event_1g4fm7l\" \/>\n    <bpmn:sequenceFlow id=\"Flow_029tzwa\" sourceRef=\"Activity_0rfabvw\" targetRef=\"Activity_0c1ochz\" \/>\n    <bpmn:sequenceFlow id=\"Flow_1l4c60m\" sourceRef=\"Activity_138j37e\" targetRef=\"Activity_0xgpoj5\" \/>\n    <bpmn:sequenceFlow id=\"Flow_03vaczo\" sourceRef=\"Activity_1k8hebb\" targetRef=\"Activity_138j37e\" \/>\n    <bpmn:sequenceFlow id=\"Flow_1wes50d\" sourceRef=\"Activity_1t9op6x\" targetRef=\"Event_0w14xna\" \/>\n    <bpmn:sequenceFlow id=\"Flow_1lqabpj\" sourceRef=\"Activity_0xgpoj5\" targetRef=\"Activity_1t9op6x\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${verified==\"false\"}<\/bpmn:conditionExpression>\n    <\/bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_0y71a4v\" sourceRef=\"Activity_0xgpoj5\" targetRef=\"Activity_0rfabvw\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${verified==\"true\"}<\/bpmn:conditionExpression>\n    <\/bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_18qx78x\" sourceRef=\"Event_0veur5u\" targetRef=\"Activity_1k8hebb\" \/>\n    <bpmn:sequenceFlow id=\"Flow_0umuvut\" sourceRef=\"Event_07n3bfj\" targetRef=\"Activity_1q5apsx\" \/>\n    <bpmn:sequenceFlow id=\"Flow_0e5j15m\" sourceRef=\"Activity_1q5apsx\" targetRef=\"Activity_0rfabvw\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${verified==\"true\"}<\/bpmn:conditionExpression>\n    <\/bpmn:sequenceFlow>\n    <bpmn:sequenceFlow id=\"Flow_13q471t\" sourceRef=\"Activity_1q5apsx\" targetRef=\"Activity_1t9op6x\">\n      <bpmn:conditionExpression xsi:type=\"bpmn:tFormalExpression\">${verified==\"false\"}<\/bpmn:conditionExpression>\n    <\/bpmn:sequenceFlow>\n    <bpmn:serviceTask id=\"Activity_1t9op6x\" name=\"Email regarding LEAVE Request rejected\" camunda:class=\"com.utyadav.company.NSNLeaveRequest.NSNMailReject\">\n      <bpmn:incoming>Flow_1lqabpj<\/bpmn:incoming>\n      <bpmn:incoming>Flow_13q471t<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1wes50d<\/bpmn:outgoing>\n    <\/bpmn:serviceTask>\n    <bpmn:userTask id=\"Activity_0c1ochz\" name=\"Takes Leave\">\n      <bpmn:incoming>Flow_029tzwa<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0o0wzbx<\/bpmn:outgoing>\n    <\/bpmn:userTask>\n  <\/bpmn:process>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"NSNEmployeePlaybook\">\n      <bpmndi:BPMNShape id=\"Participant_12wqvo5_di\" bpmnElement=\"Participant_12wqvo5\" isHorizontal=\"true\">\n        <dc:Bounds x=\"160\" y=\"80\" width=\"1270\" height=\"700\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Lane_1scd4l7_di\" bpmnElement=\"Lane_1scd4l7\" isHorizontal=\"true\" bioc:stroke=\"rgb(142, 36, 170)\" bioc:fill=\"rgb(225, 190, 231)\">\n        <dc:Bounds x=\"190\" y=\"285\" width=\"1240\" height=\"495\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Lane_1uad5je_di\" bpmnElement=\"Lane_1uad5je\" isHorizontal=\"true\" bioc:stroke=\"rgb(30, 136, 229)\" bioc:fill=\"rgb(187, 222, 251)\">\n        <dc:Bounds x=\"190\" y=\"80\" width=\"1240\" height=\"205\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNEdge id=\"Flow_0o0wzbx_di\" bpmnElement=\"Flow_0o0wzbx\">\n        <di:waypoint x=\"1170\" y=\"175\" \/>\n        <di:waypoint x=\"1282\" y=\"175\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_029tzwa_di\" bpmnElement=\"Flow_029tzwa\">\n        <di:waypoint x=\"1020\" y=\"340\" \/>\n        <di:waypoint x=\"1020\" y=\"175\" \/>\n        <di:waypoint x=\"1070\" y=\"175\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1l4c60m_di\" bpmnElement=\"Flow_1l4c60m\">\n        <di:waypoint x=\"620\" y=\"215\" \/>\n        <di:waypoint x=\"620\" y=\"330\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_03vaczo_di\" bpmnElement=\"Flow_03vaczo\">\n        <di:waypoint x=\"500\" y=\"175\" \/>\n        <di:waypoint x=\"570\" y=\"175\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1wes50d_di\" bpmnElement=\"Flow_1wes50d\">\n        <di:waypoint x=\"1070\" y=\"650\" \/>\n        <di:waypoint x=\"1282\" y=\"650\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1lqabpj_di\" bpmnElement=\"Flow_1lqabpj\">\n        <di:waypoint x=\"620\" y=\"410\" \/>\n        <di:waypoint x=\"620\" y=\"670\" \/>\n        <di:waypoint x=\"970\" y=\"670\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0y71a4v_di\" bpmnElement=\"Flow_0y71a4v\">\n        <di:waypoint x=\"670\" y=\"360\" \/>\n        <di:waypoint x=\"970\" y=\"360\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_18qx78x_di\" bpmnElement=\"Flow_18qx78x\">\n        <di:waypoint x=\"318\" y=\"175\" \/>\n        <di:waypoint x=\"400\" y=\"175\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0umuvut_di\" bpmnElement=\"Flow_0umuvut\">\n        <di:waypoint x=\"650\" y=\"428\" \/>\n        <di:waypoint x=\"650\" y=\"500\" \/>\n        <di:waypoint x=\"770\" y=\"500\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0e5j15m_di\" bpmnElement=\"Flow_0e5j15m\">\n        <di:waypoint x=\"845\" y=\"460\" \/>\n        <di:waypoint x=\"845\" y=\"410\" \/>\n        <di:waypoint x=\"970\" y=\"410\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_13q471t_di\" bpmnElement=\"Flow_13q471t\">\n        <di:waypoint x=\"840\" y=\"540\" \/>\n        <di:waypoint x=\"840\" y=\"620\" \/>\n        <di:waypoint x=\"970\" y=\"620\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNShape id=\"Activity_0xgpoj5_di\" bpmnElement=\"Activity_0xgpoj5\" bioc:stroke=\"rgb(142, 36, 170)\" bioc:fill=\"rgb(225, 190, 231)\">\n        <dc:Bounds x=\"570\" y=\"330\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_1q5apsx_di\" bpmnElement=\"Activity_1q5apsx\" bioc:stroke=\"rgb(142, 36, 170)\" bioc:fill=\"rgb(225, 190, 231)\">\n        <dc:Bounds x=\"770\" y=\"460\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_0rfabvw_di\" bpmnElement=\"Activity_0rfabvw\" bioc:stroke=\"rgb(67, 160, 71)\" bioc:fill=\"rgb(200, 230, 201)\">\n        <dc:Bounds x=\"970\" y=\"340\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_138j37e_di\" bpmnElement=\"Activity_138j37e\" bioc:stroke=\"rgb(251, 140, 0)\" bioc:fill=\"rgb(255, 224, 178)\">\n        <dc:Bounds x=\"570\" y=\"135\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_1k8hebb_di\" bpmnElement=\"Activity_1k8hebb\" bioc:stroke=\"rgb(251, 140, 0)\" bioc:fill=\"rgb(255, 224, 178)\">\n        <dc:Bounds x=\"400\" y=\"135\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_0veur5u_di\" bpmnElement=\"Event_0veur5u\" bioc:stroke=\"rgb(251, 140, 0)\" bioc:fill=\"rgb(255, 224, 178)\">\n        <dc:Bounds x=\"282\" y=\"157\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"259\" y=\"203\" width=\"86\" height=\"14\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_1g4fm7l_di\" bpmnElement=\"Event_1g4fm7l\" bioc:stroke=\"rgb(229, 57, 53)\" bioc:fill=\"rgb(255, 205, 210)\">\n        <dc:Bounds x=\"1282\" y=\"157\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"1275\" y=\"203\" width=\"51\" height=\"27\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_0w14xna_di\" bpmnElement=\"Event_0w14xna\" bioc:stroke=\"rgb(229, 57, 53)\" bioc:fill=\"rgb(255, 205, 210)\">\n        <dc:Bounds x=\"1282\" y=\"632\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"1266\" y=\"675\" width=\"69\" height=\"27\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_1t9op6x_di\" bpmnElement=\"Activity_1t9op6x\" bioc:stroke=\"rgb(229, 57, 53)\" bioc:fill=\"rgb(255, 205, 210)\">\n        <dc:Bounds x=\"970\" y=\"610\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_1bglcfj_di\" bpmnElement=\"Activity_0c1ochz\" bioc:stroke=\"rgb(251, 140, 0)\" bioc:fill=\"rgb(255, 224, 178)\">\n        <dc:Bounds x=\"1070\" y=\"135\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_07n3bfj_di\" bpmnElement=\"Event_07n3bfj\">\n        <dc:Bounds x=\"632\" y=\"392\" width=\"36\" height=\"36\" \/>\n      <\/bpmndi:BPMNShape>\n    <\/bpmndi:BPMNPlane>\n  <\/bpmndi:BPMNDiagram>\n<\/bpmn:definitions>\n';
+      importXML(diagramXML);
+
+    })(window.BpmnJS, window.jQuery);
+  </script>
+</body>
+</html>

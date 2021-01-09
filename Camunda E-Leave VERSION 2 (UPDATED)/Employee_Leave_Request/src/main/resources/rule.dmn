@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/DMN/20151101/dmn.xsd" xmlns:camunda="http://camunda.org/schema/1.0/dmn" id="Definitions_1py7339" name="DRD" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="3.5.0">
+  <decision id="rule" name="rule">
+    <decisionTable id="decisionTable_1">
+      <input id="input_1" label="Days" camunda:inputVariable="Days">
+        <inputExpression id="inputExpression_1" typeRef="long">
+          <text></text>
+        </inputExpression>
+      </input>
+      <output id="output_1" label="nature" name="nature" typeRef="string" />
+      <rule id="DecisionRule_07gu01d">
+        <inputEntry id="UnaryTests_1w9fnf9">
+          <text>&gt; 10</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1i6bymn">
+          <text>"Can't Proceed"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0790gl1">
+        <inputEntry id="UnaryTests_1y6dxi9">
+          <text>&lt; 10</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0ei62mv">
+          <text>"You can Proceed"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

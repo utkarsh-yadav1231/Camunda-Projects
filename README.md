@@ -7,7 +7,7 @@ To run this project we would need
 3) Camunda-BPM-Wildfly 7.14.0
 4) Also, all the required dependencies are already specified in pom.xml file
 
-# PLAYBOOK IMAGE FOR EMPLOYEE LEAVE REQUEST shown below
+# PLAYBOOK IMAGE FOR EMPLOYEE LEAVE REQUEST -
 
 <img src="https://github.com/utkarsh-yadav1231/Camunda-Projects/blob/main/Camunda%20E-Leave%20VERSION%202%20(UPDATED)/Employee_Leave_Request/Camunda_Playbook_Image.png" alt="SS 1"/>
 
